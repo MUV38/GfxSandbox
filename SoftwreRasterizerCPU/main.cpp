@@ -66,6 +66,13 @@ s32 orient2d(const Vector2& a, const Vector2& b, const Vector2& c)
 	return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 
+// Rasterization Rules(The top-left rule)
+// https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules
+bool isTopLeft(const Vector2& a, const Vector2& b)
+{
+	return (a.y == b.y && a.x < b.x) || (a.y > b.y);
+}
+
 void rasterize(Color8* colors, u32 width, u32 height, const Vertex* vertices, const u32 (&indices)[3])
 {
 	const Vertex& v0 = vertices[indices[0]];
@@ -82,6 +89,10 @@ void rasterize(Color8* colors, u32 width, u32 height, const Vertex* vertices, co
 	maxx = std::min(maxx, static_cast<s32>(width) - 1);
 	maxy = std::min(maxy, static_cast<s32>(height) - 1);
 
+	s32 b0 = isTopLeft(v2.pos, v1.pos) ? 0 : -1;
+	s32 b1 = isTopLeft(v0.pos, v2.pos) ? 0 : -1;
+	s32 b2 = isTopLeft(v1.pos, v0.pos) ? 0 : -1;
+
 	for (s32 h = miny; h <= maxy; ++h)
 	{
 		for (s32 w = minx; w <= maxx; ++w)
@@ -91,7 +102,7 @@ void rasterize(Color8* colors, u32 width, u32 height, const Vertex* vertices, co
 			s32 a1 = orient2d(v0.pos, v2.pos, p);
 			s32 a2 = orient2d(v1.pos, v0.pos, p);
 
-			if (a0 >= 0 && a1 >= 0 && a2 >= 0)
+			if ((a0 + b0) >= 0 && (a1 + b1) >= 0 && (a2 + b2) >= 0)
 			{
 				// èdêSç¿ïW
 				s32 totalWeight = a0 + a1 + a2;
