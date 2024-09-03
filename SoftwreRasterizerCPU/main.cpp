@@ -49,6 +49,8 @@ f32 color8to32(u8 v)
 // Reference
 // https://fgiesen.wordpress.com/2013/02/06/the-barycentric-conspirac/
 // https://fgiesen.wordpress.com/2013/02/08/triangle-rasterization-in-practice/
+// https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
+// https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules
 
 struct Vector2
 {
@@ -67,7 +69,6 @@ s32 orient2d(const Vector2& a, const Vector2& b, const Vector2& c)
 }
 
 // Rasterization Rules(The top-left rule)
-// https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules
 bool isTopLeft(const Vector2& a, const Vector2& b)
 {
 	return (a.y == b.y && a.x < b.x) || (a.y > b.y);
@@ -84,6 +85,8 @@ void rasterize(Color8* colors, u32 width, u32 height, const Vertex* vertices, co
 	s32 maxx = std::max(std::max(v0.pos.x, v1.pos.x), v2.pos.x);
 	s32 maxy = std::max(std::max(v0.pos.y, v1.pos.y), v2.pos.y);
 
+	// TODO: clipping
+
 	minx = std::max(minx, 0);
 	miny = std::max(miny, 0);
 	maxx = std::min(maxx, static_cast<s32>(width) - 1);
@@ -93,21 +96,29 @@ void rasterize(Color8* colors, u32 width, u32 height, const Vertex* vertices, co
 	s32 b1 = isTopLeft(v0.pos, v2.pos) ? 0 : -1;
 	s32 b2 = isTopLeft(v1.pos, v0.pos) ? 0 : -1;
 
-	for (s32 h = miny; h <= maxy; ++h)
-	{
-		for (s32 w = minx; w <= maxx; ++w)
-		{
-			const Vector2 p = { w, h };
-			s32 a0 = orient2d(v2.pos, v1.pos, p);
-			s32 a1 = orient2d(v0.pos, v2.pos, p);
-			s32 a2 = orient2d(v1.pos, v0.pos, p);
+	s32 a21 = v2.pos.y - v1.pos.y, b21 = v1.pos.x - v2.pos.x;
+	s32 a02 = v0.pos.y - v2.pos.y, b02 = v2.pos.x - v0.pos.x;
+	s32 a10 = v1.pos.y - v0.pos.y, b10 = v0.pos.x - v1.pos.x;
 
-			if ((a0 + b0) >= 0 && (a1 + b1) >= 0 && (a2 + b2) >= 0)
+	Vector2 p = { minx, miny };
+	s32 det0y = orient2d(v2.pos, v1.pos, p);
+	s32 det1y = orient2d(v0.pos, v2.pos, p);
+	s32 det2y = orient2d(v1.pos, v0.pos, p);
+
+	for (; p.y <= maxy; p.y++)
+	{
+		s32 det0 = det0y;
+		s32 det1 = det1y;
+		s32 det2 = det2y;
+
+		for (p.x=minx; p.x <= maxx; p.x++)
+		{
+			if ((det0 + b0) >= 0 && (det1 + b1) >= 0 && (det2 + b2) >= 0)
 			{
 				// 重心座標
-				s32 totalWeight = a0 + a1 + a2;
-				f32 w0 = a0 / static_cast<f32>(totalWeight);
-				f32 w1 = a1 / static_cast<f32>(totalWeight);
+				s32 totalWeight = det0 + det1 + det2;
+				f32 w0 = det0 / static_cast<f32>(totalWeight);
+				f32 w1 = det1 / static_cast<f32>(totalWeight);
 				f32 w2 = 1.0f - w0 - w1;
 
 				Color32 c0(v0.color);
@@ -118,14 +129,22 @@ void rasterize(Color8* colors, u32 width, u32 height, const Vertex* vertices, co
 				u8 g = color32to8(c0.g * w0 + c1.g * w1 + c2.g * w2);
 				u8 b = color32to8(c0.b * w0 + c1.b * w1 + c2.b * w2);
 
-				colors[w + width * h] = { r, g, b };
+				colors[p.x + width * p.y] = { r, g, b };
 			}
 			else
 			{
 				// ピクセルを書き込まなかった捜査範囲
-				//colors[w + width * h] = { 128, 128, 128 };
+				//colors[p.x + width * p.y] = { 128, 128, 128 };
 			}
+
+			det0 += a21;
+			det1 += a02;
+			det2 += a10;
 		}
+
+		det0y += b21;
+		det1y += b02;
+		det2y += b10;
 	}
 }
 
