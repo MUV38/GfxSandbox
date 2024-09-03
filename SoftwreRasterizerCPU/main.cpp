@@ -1,8 +1,8 @@
-#include <vector>
+ï»¿#include <vector>
 #include <algorithm>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#define __STDC_LIB_EXT1__ // sprintf‚ÌƒGƒ‰[‘Î‰
+#define __STDC_LIB_EXT1__ // sprintfã®ã‚¨ãƒ©ãƒ¼å¯¾å¿œ
 #include <stb_image_write.h>
 
 using u8 = uint8_t;
@@ -115,7 +115,7 @@ void rasterize(Color8* colors, u32 width, u32 height, const Vertex* vertices, co
 		{
 			if ((det0 + b0) >= 0 && (det1 + b1) >= 0 && (det2 + b2) >= 0)
 			{
-				// dSÀ•W
+				// é‡å¿ƒåº§æ¨™
 				s32 totalWeight = det0 + det1 + det2;
 				f32 w0 = det0 / static_cast<f32>(totalWeight);
 				f32 w1 = det1 / static_cast<f32>(totalWeight);
@@ -133,7 +133,7 @@ void rasterize(Color8* colors, u32 width, u32 height, const Vertex* vertices, co
 			}
 			else
 			{
-				// ƒsƒNƒZƒ‹‚ğ‘‚«‚Ü‚È‚©‚Á‚½‘{¸”ÍˆÍ
+				// ãƒ”ã‚¯ã‚»ãƒ«ã‚’æ›¸ãè¾¼ã¾ãªã‹ã£ãŸæœæŸ»ç¯„å›²
 				//colors[p.x + width * p.y] = { 128, 128, 128 };
 			}
 
