@@ -1,6 +1,11 @@
 #include <vdb.h>
+#undef min
+#undef max
+
 #include <cmath>
 #include <vector>
+#include <limits>
+#include <numbers>
 
 class Vec3
 {
@@ -97,6 +102,30 @@ Vec3 normalize(const Vec3& v)
 	return v / length(v);
 }
 
+class Xorshift32
+{
+public:
+	Xorshift32(uint32_t seed)
+		: mState(seed)
+	{}
+
+	uint32_t next()
+	{
+		mState ^= mState << 13;
+		mState ^= mState >> 17;
+		mState ^= mState << 5;
+		return mState;
+	}
+
+	float nextf()
+	{
+		return next() / static_cast<float>(std::numeric_limits<uint32_t>::max());
+	}
+
+private:
+	uint32_t mState;
+};
+
 int main()
 {
 	constexpr float GrassHeight = 10.0f;
@@ -148,27 +177,53 @@ int main()
 		12, 13, 14
 	};
 
+	constexpr int PointCount = 1000;
+	constexpr float Radius = 50.0f;
+
+	Xorshift32 rng(123456789);
+	std::vector<Vec3> points(PointCount);
+	for (int i = 0; i < PointCount; ++i)
+	{
+		float r = rng.nextf() * Radius;
+		float theta = rng.nextf() * 2.0f * std::numbers::pi_v<float>;
+		points[i] = { r * std::cosf(theta), 0, r * std::sinf(theta) };
+	}
+
 	vdb_frame();
 
 	vdb_color(0, 1, 1);
 
+#if 0
 	for (int i = 0; i < VertexCount; ++i)
 	{
 		vdb_point(vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
 	}
+#endif
+	for (const auto& p : points)
+	{
+		vdb_point(p.x, p.y, p.z);
+	}
 
 	vdb_color(0, 1, 0);
 
-	for (int i = 0; i < (std::size(indices) / 3); ++i)
+	for (const auto& p : points)
 	{
-		const Vertex& v0 = vertices[indices[i * 3 + 0]];
-		const Vertex& v1 = vertices[indices[i * 3 + 1]];
-		const Vertex& v2 = vertices[indices[i * 3 + 2]];
-		vdb_triangle(
-			v0.pos.x, v0.pos.y, v0.pos.z,
-			v1.pos.x, v1.pos.y, v1.pos.z,
-			v2.pos.x, v2.pos.y, v2.pos.z
-		);
+		for (int i = 0; i < (std::size(indices) / 3); ++i)
+		{
+			const Vertex& v0 = vertices[indices[i * 3 + 0]];
+			const Vertex& v1 = vertices[indices[i * 3 + 1]];
+			const Vertex& v2 = vertices[indices[i * 3 + 2]];
+			
+			const Vec3 p0 = v0.pos + p;
+			const Vec3 p1 = v1.pos + p;
+			const Vec3 p2 = v2.pos + p;
+
+			vdb_triangle(
+				p0.x, p0.y, p0.z,
+				p1.x, p1.y, p1.z,
+				p2.x, p2.y, p2.z
+			);
+		}
 	}
 
 	return 0;
