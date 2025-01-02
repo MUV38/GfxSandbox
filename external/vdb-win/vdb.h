@@ -12,7 +12,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#define snprintf sprintf_s
+//#define snprintf sprintf_s
 #define STRDUP _strdup
 
 #endif
